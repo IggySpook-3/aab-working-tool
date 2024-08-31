@@ -4,8 +4,11 @@ using System.IO;
 
 class AabToApkConverter
 {
-    static void Main(string[] args )
+    static void Main(string[] args)
     {
+        Console.WriteLine("Greetings!Thanks for using this script!");
+        Console.WriteLine("Main functional: converting .aab files to .apks and installing them on connected device!");
+        Console.WriteLine("If you catch an error, message me via Slack!");
         // юзер инпут для файлов 
         Console.WriteLine("Enter the path to the AAB file:");
         string aabFilePath = Console.ReadLine();
@@ -52,10 +55,19 @@ class AabToApkConverter
         {
             ConvertAabToApk(aabFilePath, bundletoolPath, apkOutputPath);
             Console.WriteLine("Conversion completed successfully. APK saved at: " + apkOutputPath);
+
+            // предложить установить файл APKS на устройство 
+            Console.WriteLine("Would you like to install the APK on a connected device? (yes/no):");
+            string installResponse = Console.ReadLine().ToLower();
+
+            if (installResponse == "yes")
+            {
+                InstallApksToDevice(bundletoolPath, apkOutputPath);
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine("An error occurred during the conversion: " + ex.Message);
+            Console.WriteLine("An error occurred during the process: " + ex.Message);
         }
     }
 
@@ -64,7 +76,7 @@ class AabToApkConverter
         // команда бандлтула 
         string command = $"-jar \"{bundletoolPath}\" build-apks --bundle=\"{aabFilePath}\" --output=\"{apkOutputPath}\" --mode=universal";
 
-       // информация про старт процесса 
+        // информация про старт процесса 
         var processStartInfo = new ProcessStartInfo
         {
             FileName = "java",
@@ -91,6 +103,43 @@ class AabToApkConverter
                 throw new Exception($"Bundletool error: {error}");
             }
 
+            Console.WriteLine(output);
+        }
+    }
+
+    static void InstallApksToDevice(string bundletoolPath, string apkOutputPath)
+    {
+        // команда установки APKS 
+        string command = $"-jar \"{bundletoolPath}\" install-apks --apks=\"{apkOutputPath}\"";
+
+        // информация про старт процесса 
+        var processStartInfo = new ProcessStartInfo
+        {
+            FileName = "java",
+            Arguments = command,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using (var process = new Process { StartInfo = processStartInfo })
+        {
+            process.Start();
+
+            // дебаг
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+
+            process.WaitForExit();
+
+            // ошибочки 
+            if (process.ExitCode != 0)
+            {
+                throw new Exception($"Bundletool error during installation: {error}");
+            }
+
+            Console.WriteLine("APK installation completed successfully.");
             Console.WriteLine(output);
         }
     }
